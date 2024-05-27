@@ -23,11 +23,11 @@ supported_models=["XD670","XD665","XD220V","XD225V","XD295V"]
 partial_models={}
 #{"HPE CRAY XD670": "XD670", "HPE CRAY XD670 DLC": "XD670", "HPE CRAY XD670 SC": "XD670", "HPE CRAY XD665": "XD665", "HPE CRAY XD665 SC": "XD665", "HPE CRAY XD220v": "XD220"}
 supported_targets={
-    "XD665": ["BMC", "BIOS", "RT_NVME", "RT_OTHER", "RT_SA", "PDB", "MainCPLD", "UBM6"],
+    "XD665": ["BMC", "BIOS", "RT_NVME", "RT_OTHER", "RT_SA", "PDB", "MainCPLD", "UBM6", "GPU", "GPU1_VBIOS", "GPU2_VBIOS", "GPU3_VBIOS", "GPU4_VBIOS", "GPU_ERot", "GPU_FPGA"],
     "XD670": ["BMC", "BMCImage1", "BMCImage2", "BIOS", "BIOS2", "BPB_CPLD1", "BPB_CPLD2", "MB_CPLD1", "SCM_CPLD1"],
-    "XD220V": ["BMC", "BIOS", "MainCPLD", "HDDBPPIC", "PDBPIC"],
-    "XD225V": ["BMC", "BIOS", "MainCPLD", "HDDBPPIC", "PDBPIC"],
-    "XD295V": ["BMC", "BIOS", "MainCPLD", "HDDBPPIC", "PDBPIC"],
+    "XD220V": ["BMC", "BIOS", "MainCPLD", "HDDBPPIC", "PDBPIC", "GPU"],
+    "XD225V": ["BMC", "BIOS", "MainCPLD", "HDDBPPIC", "PDBPIC", "GPU"],
+    "XD295V": ["BMC", "BIOS", "MainCPLD", "HDDBPPIC", "PDBPIC", "GPU"],
 }
 # supported_targets = {
 #     "HPE CRAY XD220V": ["BMC", "BIOS", "MainCPLD", "HDDBPPIC", "PDBPIC"],
@@ -48,7 +48,7 @@ XD670_unsupported_targets = ["BMCImage1","BPB_CPLD1", "BPB_CPLD2", "MB_CPLD1", "
 #BPB_CPLD1 and BPB_CPLD2 together equivalent to BPB_CPLD
 #MB_CPLD1 and SCM_CPLD1 together equivalent to MB_CPLD1_SCM_CPLD1
 
-all_targets = ['BMC', 'BMCImage1', 'BMCImage2', 'BIOS', 'BIOS2', 'MainCPLD', 'MB_CPLD1', 'BPB_CPLD1', 'BPB_CPLD2', 'SCM_CPLD1', 'PDB', 'PDBPIC', 'HDDBPPIC', 'RT_NVME', 'RT_OTHER', 'RT_SA', 'UBM6']
+all_targets = ['BMC', 'BMCImage1', 'BMCImage2', 'BIOS', 'BIOS2', 'MainCPLD', 'MB_CPLD1', 'BPB_CPLD1', 'BPB_CPLD2', 'SCM_CPLD1', 'PDB', 'PDBPIC', 'HDDBPPIC', 'RT_NVME', 'RT_OTHER', 'RT_SA', 'UBM6', 'GPU1_VBIOS', 'GPU2_VBIOS', 'GPU3_VBIOS', 'GPU4_VBIOS', 'GPU_ERot', 'GPU_FPGA']
  
 reboot = {
     "BIOS": ["AC_PC_redfish"],
@@ -227,12 +227,12 @@ class CrayRedfishUtils(RedfishUtils):
         # username = attr.get('username')
         # password = attr.get('password')
         csv_file_name = attr.get('output_file_name')
+        model = self.get_model()
         if not os.path.exists(csv_file_name):      
             f = open(csv_file_name, "w")
-            to_write="IP_Address,Model,BMC,BMCImage1,BMCImage2,BIOS,BIOS2,MainCPLD,MB_CPLD1,BPB_CPLD1,BPB_CPLD2,SCM_CPLD1,PDB,PDBPIC,HDDBPPIC,RT_NVME,RT_OTHER,RT_SA,UBM6\n"
+            to_write="IP_Address,Model,BMC,BMCImage1,BMCImage2,BIOS,BIOS2,MainCPLD,MB_CPLD1,BPB_CPLD1,BPB_CPLD2,SCM_CPLD1,PDB,PDBPIC,HDDBPPIC,RT_NVME,RT_OTHER,RT_SA,UBM6,GPU1_VBIOS,GPU2_VBIOS,GPU3_VBIOS,GPU4_VBIOS,GPU_ERot,GPU_FPGA\n"
             f.write(to_write)
             f.close()                                                               
-        model = self.get_model()
         #print("******model of is", IP, model)
         entry=[]
         entry.append(IP)
@@ -264,7 +264,7 @@ class CrayRedfishUtils(RedfishUtils):
         before_version=None
         after_version=None
         update_status=None
-        if target!="BPB_CPLD" and target!="SCM_CPLD1" and target!="MB_CPLD1":
+        if target!="BPB_CPLD" and target!="SCM_CPLD1" and target!="MB_CPLD1" and target!="GPU":
             before_version = self.get_fw_version(target)
             if target=="BMC" and "XD670" in model.upper() and "failed" in before_version:
                 target="BMCImage1"
@@ -284,8 +284,12 @@ class CrayRedfishUtils(RedfishUtils):
                     headers = {'Expect': 'Continue','Content-Type': 'multipart/form-data'}
                     body = {}
                     if target!="BPB_CPLD":
-                        targets_uri='/redfish/v1/UpdateService/FirmwareInventory/'+target+'/'
-                        body['UpdateParameters'] = (None, json.dumps({"Targets": [targets_uri]}), 'application/json')
+                        if image_type=="PLDM":
+                            targets_uri='/redfish/v1/UpdateService/upload/'
+                            body['UpdateParameters'] = (None, json.dumps({"Targets": []}), 'application/json')
+                        else:
+                            targets_uri='/redfish/v1/UpdateService/FirmwareInventory/'+target+'/'
+                            body['UpdateParameters'] = (None, json.dumps({"Targets": [targets_uri]}), 'application/json')
                     else:
                         body['UpdateParameters'] = (None, json.dumps({"Targets": ['/redfish/v1/UpdateService/FirmwareInventory/BPB_CPLD1/', '/redfish/v1/UpdateService/FirmwareInventory/BPB_CPLD2/']}), 'application/json')
                     body['OemParameters'] = (None, json.dumps({"ImageType": image_type}) , 'application/json')
@@ -294,11 +298,10 @@ class CrayRedfishUtils(RedfishUtils):
                         encoder = MultipartEncoder(body)
                         body = encoder.to_string()
                         headers['Content-Type'] = encoder.content_type
-
                         response = self.post_multi_request(self.root_uri + data['MultipartHttpPushUri'],
                                                     headers=headers, payload=body)
                         if response is False:
-                            update_status="failed_POST"
+                            update_status="failed_Post"
                             after_version="NA"
                         else:
                             #add time.sleep (for BMC to comeback after flashing )
@@ -327,21 +330,21 @@ class CrayRedfishUtils(RedfishUtils):
                             if update_status.lower()=="success":
                                 #call version of respective target and store versions after update    
                                 time.sleep(180) #extra time requiring as of now for systems under test
-                                if target!="BPB_CPLD" and target!="SCM_CPLD1" and target!="MB_CPLD1":
+                                if target!="BPB_CPLD" and target!="SCM_CPLD1" and target!="MB_CPLD1" and target!="GPU":
                                     after_version=self.get_fw_version(target)
                             else:
-                                if target!="BPB_CPLD" and target!="SCM_CPLD1" and target!="MB_CPLD1":
+                                if target!="BPB_CPLD" and target!="SCM_CPLD1" and target!="MB_CPLD1" and target!="GPU":
                                     after_version="NA"
                                 #update_status="failed"
 
-            if target!="BPB_CPLD" and target!="SCM_CPLD1" and target!="MB_CPLD1":                     
+            if target!="BPB_CPLD" and target!="SCM_CPLD1" and target!="MB_CPLD1" and target!="GPU":                     
                 return before_version,after_version,update_status
             else:
                 return update_status
         else:
             #print("in line 341:", before_version,after_version,update_status)
             update_status="NA"
-            if target!="BPB_CPLD" and target!="SCM_CPLD1" and target!="MB_CPLD1": 
+            if target!="BPB_CPLD" and target!="SCM_CPLD1" and target!="MB_CPLD1" and target!="GPU": 
                 after_version="NA"                    
                 return before_version,after_version,update_status
             else:
@@ -371,7 +374,6 @@ class CrayRedfishUtils(RedfishUtils):
         IP = attr.get('baseuri')
         username = attr.get('username')
         password = attr.get('password')
-        image_type = attr.get('update_image_type')
         update_status = "success"
         before_version=None
         after_version=None
@@ -380,6 +382,9 @@ class CrayRedfishUtils(RedfishUtils):
         # after_version="NA"
         image_path="NA"
         csv_file_name = attr.get('output_file_name')
+        image_type = config.get('Firmware_type','update_image_type')
+        if image_type is None:
+            image_type = attr.get('update_image_type')
 
         if target=="" or target.upper() in XD670_unsupported_targets:
             return {'ret': False, 'changed': True, 'msg': 'Must specify the correct target for firmware update'}   
