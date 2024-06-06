@@ -48,7 +48,10 @@ XD670_unsupported_targets = ["BMCImage1","BPB_CPLD1", "BPB_CPLD2", "MB_CPLD1", "
 #BPB_CPLD1 and BPB_CPLD2 together equivalent to BPB_CPLD
 #MB_CPLD1 and SCM_CPLD1 together equivalent to MB_CPLD1_SCM_CPLD1
 
-all_targets = ['BMC', 'BMCImage1', 'BMCImage2', 'BIOS', 'BIOS2', 'MainCPLD', 'MB_CPLD1', 'BPB_CPLD1', 'BPB_CPLD2', 'SCM_CPLD1', 'PDB', 'PDBPIC', 'HDDBPPIC', 'RT_NVME', 'RT_OTHER', 'RT_SA', 'UBM6', 'GPU1_VBIOS', 'GPU2_VBIOS', 'GPU3_VBIOS', 'GPU4_VBIOS', 'GPU_ERot', 'GPU_FPGA']
+#all_targets = ['BMC', 'BMCImage1', 'BMCImage2', 'BIOS', 'BIOS2', 'MainCPLD', 'MB_CPLD1', 'BPB_CPLD1', 'BPB_CPLD2', 'SCM_CPLD1', 'PDB', 'PDBPIC', 'HDDBPPIC', 'RT_NVME', 'RT_OTHER', 'RT_SA', 'UBM6', 'GPU1_VBIOS', 'GPU2_VBIOS', 'GPU3_VBIOS', 'GPU4_VBIOS', 'GPU_ERot', 'GPU_FPGA']
+XD670_targets = ['BMC', 'BMCImage1', 'BMCImage2', 'BIOS', 'BIOS2', 'BPB_CPLD1', 'BPB_CPLD2', 'MB_CPLD1', 'SCM_CPLD1']
+XD665_targets = ['BMC', 'BIOS', 'MainCPLD', 'PDB', 'RT_NVME', 'RT_OTHER', 'RT_SA', 'UBM6', 'GPU1_VBIOS', 'GPU2_VBIOS', 'GPU3_VBIOS', 'GPU4_VBIOS', 'GPU_ERot', 'GPU_FPGA']
+XD2K_targets = ['BMC', 'BIOS', 'MainCPLD', 'PDBPIC', 'HDDBPPIC']
  
 reboot = {
     "BIOS": ["AC_PC_redfish"],
@@ -230,7 +233,15 @@ class CrayRedfishUtils(RedfishUtils):
         model = self.get_model()
         if not os.path.exists(csv_file_name):      
             f = open(csv_file_name, "w")
-            to_write="IP_Address,Model,BMC,BMCImage1,BMCImage2,BIOS,BIOS2,MainCPLD,MB_CPLD1,BPB_CPLD1,BPB_CPLD2,SCM_CPLD1,PDB,PDBPIC,HDDBPPIC,RT_NVME,RT_OTHER,RT_SA,UBM6,GPU1_VBIOS,GPU2_VBIOS,GPU3_VBIOS,GPU4_VBIOS,GPU_ERot,GPU_FPGA\n"
+            if "XD665"in model.upper():
+                to_write="IP_Address,Model,BMC,BIOS,MainCPLD,PDB,RT_NVME,RT_OTHER,RT_SA,UBM6,GPU1_VBIOS,GPU2_VBIOS,GPU3_VBIOS,GPU4_VBIOS,GPU_ERot,GPU_FPGA\n"
+                all_targets = XD665_targets
+            elif "XD670"in model.upper():
+                to_write="IP_Address,Model,BMC,BMCImage1,BMCImage2,BIOS,BIOS2,BPB_CPLD1,BPB_CPLD2,MB_CPLD1,SCM_CPLD1\n"
+                all_targets = XD670_targets
+            elif "XD220V" or "XD225V" or "XD295V" in model.upper():
+                to_write="IP_Address,Model,BMC,BIOS,MainCPLD,PDBPIC,HDDBPPIC\n"
+                all_targets = XD2K_targets
             f.write(to_write)
             f.close()                                                               
         #print("******model of is", IP, model)
